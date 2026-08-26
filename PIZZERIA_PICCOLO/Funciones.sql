@@ -153,3 +153,77 @@ BEGIN
 END //
 DELIMITER ;
 
+-- ------------------------------------------------------------
+-- 2) trg_auditoria_precio_pizza
+--    Si el precio_base de una pizza cambia, guarda el precio
+--    anterior y el nuevo en historial_precios.
+-- ------------------------------------------------------------
+
+DELIMITER //
+CREATE TRIGGER trg_auditoria_precio_pizza
+BEFORE UPDATE ON pizza
+FOR EACH ROW
+BEGIN
+
+    IF OLD.precio_base <> NEW.precio_base THEN
+        INSERT INTO historial_precios (id_pizza, precio_anterior, precio_nuevo, fecha_cambio, usuario_modifico)
+        VALUES (OLD.id_pizza, OLD.precio_base, NEW.precio_base, NOW(),CURRENT_USER());
+    END IF;
+END //
+DELIMITER ;
+
+-- ------------------------------------------------------------
+-- 3) trg_liberar_domiciliario
+--    Cuando un domicilio recibe su hora_entrega (pasa de NULL
+--    a un valor), el domiciliario asignado vuelve a 'disponible'.
+-- ------------------------------------------------------------
+
+DELIMITER //
+CREATE TRIGGER trg_liberar_domiciliario
+AFTER UPDATE ON domicilio
+FOR EACH ROW
+BEGIN
+
+    IF OLD.hora_entrega IS NULL
+    AND NEW.hora_entrega IS NOT NULL THEN
+        UPDATE domiciliario SET estado = 'disponible' WHERE id_domiciliario = NEW.id_domiciliario;
+    END IF;
+END //
+DELIMITER ;
+
+
+-- ############################################################
+-- VISTAS
+-- ############################################################
+
+-- ------------------------------------------------------------
+-- 1) vista_resumen_pedidos_cliente
+--    Nombre del cliente, cantidad de pedidos y total gastado.
+-- ------------------------------------------------------------
+
+CREATE VIEW vista_resumen_pedidos_cliente AS
+
+SELECT persona.id_persona, persona.nombre, COUNT(pedido.id_pedido) AS cantidad_pedidos, IFNULL(SUM(pedido.total), 0) AS total_gastadoFROM persona
+JOIN cliente ON persona.id_persona = cliente.id_persona LEFT JOIN pedido ON cliente.id_cliente = pedido.id_cliente GROUP BY persona.id_persona, persona.nombre;
+
+
+-- ------------------------------------------------------------
+-- 2) vista_desempeno_repartidores
+--    Número de entregas, tiempo promedio de entrega y zona.
+-- ------------------------------------------------------------
+
+CREATE VIEW vista_desempeno_repartidores AS
+
+SELECT persona.id_persona, persona.nombre, domiciliario.zona_asignada, COUNT(domicilio.id_domicilio) AS numero_entregas,
+AVG( TIMESTAMPDIFF(MINUTE, domicilio.hora_salida, domicilio.hora_entrega)) AS tiempo_promedio_minFROM persona
+JOIN domiciliarioON persona.id_persona = domiciliario.id_persona LEFT JOIN domicilio ON domiciliario.id_domiciliario = domicilio.id_domiciliario
+AND domicilio.hora_entrega IS NOT NULL GROUP BY persona.id_persona, persona.nombre, domiciliario.zona_asignada;
+
+-- ------------------------------------------------------------
+-- 3) vista_stock_bajo
+--    Ingredientes cuyo stock actual está por debajo del mínimo.
+-- ------------------------------------------------------------
+CREATE VIEW vista_stock_bajo AS
+
+SELECT id_ingrediente, nombre, unidad_medida, stock_actual, stock_minimo, stock_minimo - stock_actual AS unidades_faltantes 
+FROM ingrediente WHERE stock_actual < stock_minimo;
