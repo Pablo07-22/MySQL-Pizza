@@ -3,7 +3,7 @@
 -- Sistema de Gestión de Pedidos y Domicilios
 -- ============================================================
  
-CREATE pizzeria_don_piccolo;
+CREATE DATABASE pizzeria_don_piccolo;
 USE pizzeria_don_piccolo;
  
 -- ============================================================

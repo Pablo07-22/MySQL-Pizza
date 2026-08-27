@@ -99,6 +99,7 @@ BEGIN
     END IF;
 END //
 DELIMITER ;
+CALL sp_registrar_entrega(17, '2026-08- :30:00');
 
 -- ------------------------------------------------------------
 -- 2) sp_actualizar_total_pedido
@@ -147,7 +148,6 @@ CREATE TRIGGER trg_stock_ingredientes
 AFTER INSERT ON detalle_pedido
 FOR EACH ROW
 BEGIN
-
     UPDATE ingrediente i JOIN pizza_ingrediente pi ON i.id_ingrediente = pi.id_ingrediente
     SET i.stock_actual = i.stock_actual - (pi.cantidad_requerida * NEW.cantidad) WHERE pi.id_pizza = NEW.id_pizza;
 END //
@@ -203,7 +203,7 @@ DELIMITER ;
 
 CREATE VIEW vista_resumen_pedidos_cliente AS
 
-SELECT persona.id_persona, persona.nombre, COUNT(pedido.id_pedido) AS cantidad_pedidos, IFNULL(SUM(pedido.total), 0) AS total_gastadoFROM persona
+SELECT persona.id_persona, persona.nombre, COUNT(pedido.id_pedido) AS cantidad_pedidos, IFNULL(SUM(pedido.total), 0) AS total_gastado FROM persona
 JOIN cliente ON persona.id_persona = cliente.id_persona LEFT JOIN pedido ON cliente.id_cliente = pedido.id_cliente GROUP BY persona.id_persona, persona.nombre;
 
 
@@ -215,8 +215,8 @@ JOIN cliente ON persona.id_persona = cliente.id_persona LEFT JOIN pedido ON clie
 CREATE VIEW vista_desempeno_repartidores AS
 
 SELECT persona.id_persona, persona.nombre, domiciliario.zona_asignada, COUNT(domicilio.id_domicilio) AS numero_entregas,
-AVG( TIMESTAMPDIFF(MINUTE, domicilio.hora_salida, domicilio.hora_entrega)) AS tiempo_promedio_minFROM persona
-JOIN domiciliarioON persona.id_persona = domiciliario.id_persona LEFT JOIN domicilio ON domiciliario.id_domiciliario = domicilio.id_domiciliario
+AVG( TIMESTAMPDIFF(MINUTE, domicilio.hora_salida, domicilio.hora_entrega)) AS tiempo_promedio_min FROM persona
+JOIN domiciliario ON persona.id_persona = domiciliario.id_persona LEFT JOIN domicilio ON domiciliario.id_domiciliario = domicilio.id_domiciliario
 AND domicilio.hora_entrega IS NOT NULL GROUP BY persona.id_persona, persona.nombre, domiciliario.zona_asignada;
 
 -- ------------------------------------------------------------
