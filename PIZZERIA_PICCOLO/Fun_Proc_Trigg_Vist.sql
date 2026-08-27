@@ -9,7 +9,7 @@
 -- ------------------------------------------------------------
 
 DELIMITER //
-CREATE FUNCTION fn_calcular_total_pedido(id_pedido INT)
+CREATE FUNCTION fn_calcular_total_pedido(id_pedir INT)
 RETURNS DOUBLE
 DETERMINISTIC
 READS SQL DATA
@@ -20,13 +20,13 @@ BEGIN
     DECLARE iva DOUBLE;
     DECLARE total DOUBLE;
 
-    SELECT SUM(subtotal) INTO subtotal FROM detalle_pedido WHERE detalle_pedido.id_pedido = id_pedido;
+    SELECT SUM(subtotal) INTO subtotal FROM detalle_pedido WHERE detalle_pedido.id_pedido = id_pedir;
 
     IF subtotal IS NULL THEN
         SET subtotal = 0;
     END IF;
 
-    SELECT costo_envio INTO envio FROM domicilio WHERE domicilio.id_pedido = id_pedido LIMIT 1;
+    SELECT costo_envio INTO envio FROM domicilio WHERE domicilio.id_pedido = id_pedir LIMIT 1;
 
     IF envio IS NULL THEN
         SET envio = 0;
@@ -84,17 +84,17 @@ DELIMITER ;
 -- ------------------------------------------------------------
 
 DELIMITER //
-CREATE PROCEDURE sp_registrar_entrega(IN id_domicilio INT, IN hora_entrega DATETIME)
+CREATE PROCEDURE sp_registrar_entrega(IN id_domicilios INT, IN hora_entregar DATETIME)
 BEGIN
 
     DECLARE id_pedido INT;
 
-    SELECT domicilio.id_pedido INTO id_pedido FROM domicilio WHERE domicilio.id_domicilio = id_domicilio;
+    SELECT domicilio.id_pedido INTO id_pedido FROM domicilio WHERE domicilio.id_domicilio = id_domicilios;
 
     IF id_pedido IS NULL THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El domicilio no existe';
     ELSE
-        UPDATE domicilio SET domicilio.hora_entrega = hora_entrega WHERE domicilio.id_domicilio = id_domicilio;
+        UPDATE domicilio SET domicilio.hora_entrega = hora_entregar WHERE domicilio.id_domicilio = id_domicilios;
         UPDATE pedido SET estado = 'entregado' WHERE pedido.id_pedido = id_pedido;
     END IF;
 END //
@@ -108,25 +108,25 @@ DELIMITER ;
 -- ------------------------------------------------------------
 
 DELIMITER //
-CREATE PROCEDURE sp_actualizar_total_pedido(IN id_pedido INT)
+CREATE PROCEDURE sp_actualizar_total_pedido(IN id_pedid INT)
 BEGIN
 
     DECLARE subtotal DOUBLE;
     DECLARE envio DOUBLE;
 
-    SELECT SUM(detalle_pedido.subtotal)INTO subtotal FROM detalle_pedido WHERE detalle_pedido.id_pedido = id_pedido;
+    SELECT SUM(detalle_pedido.subtotal)INTO subtotal FROM detalle_pedido WHERE detalle_pedido.id_pedido = id_pedid;
 
     IF subtotal IS NULL THEN
         SET subtotal = 0;
     END IF;
 
-    SELECT costo_envio INTO envio FROM domicilio WHERE domicilio.id_pedido = id_pedido LIMIT 1;
+    SELECT costo_envio INTO envio FROM domicilio WHERE domicilio.id_pedido = id_pedid LIMIT 1;
 
     IF envio IS NULL THEN
         SET envio = 0;
     END IF;
-    UPDATE pedido SET pedido.subtotal = subtotal, pedido.iva = subtotal * 0.19, pedido.costo_envio = envio, pedido.total = fn_calcular_total_pedido(id_pedido) 
-    WHERE pedido.id_pedido = id_pedido;
+    UPDATE pedido SET pedido.subtotal = subtotal, pedido.iva = subtotal * 0.19, pedido.costo_envio = envio, pedido.total = fn_calcular_total_pedido(id_pedid) 
+    WHERE pedido.id_pedido = id_pedid;
 END //
 DELIMITER ;
 
